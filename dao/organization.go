@@ -11,12 +11,19 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-type OrganizationDao struct {
+type organizationDao struct {
 	validator     *validator.Validator
 	organizations *mongo.Collection
 }
 
-func (d *OrganizationDao) Find(ctx context.Context, filter Where) ([]*organizations.Organization, error) {
+func NewOrganizationDao(db *mongo.Database, validator *validator.Validator) *organizationDao {
+	return &organizationDao{
+		validator:     validator,
+		organizations: db.Collection(organizationsCollectionName),
+	}
+}
+
+func (d *organizationDao) Find(ctx context.Context, filter Where) ([]*organizations.Organization, error) {
 	var orgs []*organizations.Organization
 	cursor, err := d.organizations.Find(ctx, filter)
 	if err != nil {
@@ -31,7 +38,7 @@ func (d *OrganizationDao) Find(ctx context.Context, filter Where) ([]*organizati
 	return orgs, nil
 }
 
-func (d *OrganizationDao) FindOne(ctx context.Context, filter Where) (*organizations.Organization, error) {
+func (d *organizationDao) FindOne(ctx context.Context, filter Where) (*organizations.Organization, error) {
 	result := d.organizations.FindOne(ctx, filter)
 	err := result.Err()
 	if err != nil {
@@ -47,7 +54,7 @@ func (d *OrganizationDao) FindOne(ctx context.Context, filter Where) (*organizat
 	return org, nil
 }
 
-func (d *OrganizationDao) Create(ctx context.Context, org *organizations.Organization) (string, error) {
+func (d *organizationDao) Create(ctx context.Context, org *organizations.Organization) (string, error) {
 	exists, err := d.Find(ctx, Where{{Key: "name", Value: org.Name}})
 	if err != nil {
 		return "", err
@@ -68,13 +75,6 @@ func (d *OrganizationDao) Create(ctx context.Context, org *organizations.Organiz
 	return result.InsertedID.(primitive.ObjectID).Hex(), nil
 }
 
-func (d *OrganizationDao) Update(ctx context.Context, org *organizations.Organization) (*organizations.Organization, error) {
+func (d *organizationDao) Update(ctx context.Context, org *organizations.Organization) (*organizations.Organization, error) {
 	return nil, errors.New("no impl")
-}
-
-func NewOrganizationDao(db *mongo.Database, validator *validator.Validator) *OrganizationDao {
-	return &OrganizationDao{
-		validator:     validator,
-		organizations: db.Collection(organizationsCollectionName),
-	}
 }

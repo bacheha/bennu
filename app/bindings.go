@@ -1,5 +1,10 @@
 package app
 
+// Bindings is an array of keys used to generate
+// the environment variable names when loading the configuration.
+// For example: "service.name" will be -> "PREFIX_SERVICE_NAME"
+//
+// Furthermore, we use these bindings for marshalling into the app.Config.
 var Bindings = []string{
 	"service.name",
 	"service.port",

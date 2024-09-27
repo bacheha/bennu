@@ -16,8 +16,15 @@ import (
 type userIDCtxKey struct{}
 
 type userHandler struct {
-	logger     *logger.Logger
+	logger     logger.Logger
 	daoFactory dao.Factory
+}
+
+func NewUserHandler(logger logger.Logger, factory dao.Factory) *userHandler {
+	return &userHandler{
+		logger:     logger,
+		daoFactory: factory,
+	}
 }
 
 func (h *userHandler) Routes() *chi.Mux {
@@ -77,11 +84,4 @@ func UserCtx(next http.Handler) http.Handler {
 		ctx := context.WithValue(r.Context(), userIDCtxKey{}, chi.URLParam(r, "id"))
 		next.ServeHTTP(w, r.Clone(ctx))
 	})
-}
-
-func NewUserHandler(logger *logger.Logger, factory dao.Factory) *userHandler {
-	return &userHandler{
-		logger:     logger,
-		daoFactory: factory,
-	}
 }

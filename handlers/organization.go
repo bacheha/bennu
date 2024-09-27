@@ -17,8 +17,15 @@ import (
 type organizationIDCtxKey struct{}
 
 type organizationHandler struct {
-	logger     *logger.Logger
+	logger     logger.Logger
 	daoFactory dao.Factory
+}
+
+func NewOrganizationHandler(logger logger.Logger, factory dao.Factory) *organizationHandler {
+	return &organizationHandler{
+		logger:     logger,
+		daoFactory: factory,
+	}
 }
 
 func (h *organizationHandler) Routes() *chi.Mux {
@@ -99,11 +106,4 @@ func OrganizationCtx(next http.Handler) http.Handler {
 		ctx := context.WithValue(r.Context(), organizationIDCtxKey{}, chi.URLParam(r, "id"))
 		next.ServeHTTP(w, r.Clone(ctx))
 	})
-}
-
-func NewOrganizationHandler(logger *logger.Logger, factory dao.Factory) *organizationHandler {
-	return &organizationHandler{
-		logger:     logger,
-		daoFactory: factory,
-	}
 }

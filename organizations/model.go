@@ -18,6 +18,10 @@ type Organization struct {
 	UpdatedAt time.Time          `json:"updatedAt" bson:"updatedAt" validate:"required"`
 }
 
+func NewOrganization() *Organization {
+	return &Organization{}
+}
+
 func (m *Organization) Render(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
@@ -28,8 +32,4 @@ func (m *Organization) FromJSON(r io.Reader) error {
 		return err
 	}
 	return err
-}
-
-func NewOrganization() *Organization {
-	return &Organization{}
 }

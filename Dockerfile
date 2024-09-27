@@ -3,8 +3,8 @@ WORKDIR /app
 COPY go.* ./
 RUN go mod download
 COPY . ./
-RUN CGO_ENABLED=0 GOOS=linux go build -v -o bennu
+RUN CGO_ENABLED=0 GOOS=linux go build -v -o server
 
 FROM alpine:3
-COPY --from=builder /app/bennu /
-CMD ["/bennu"]
+COPY --from=builder /app/server /
+CMD ["/server"]

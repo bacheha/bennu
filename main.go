@@ -25,23 +25,18 @@ import (
 
 func main() {
 	// logger
-	log, err := logger.New()
+	log, err := logger.NewZapLogger()
 	if err != nil {
 		fmt.Printf("logger new error: %v", err)
 		os.Exit(1)
 	}
-	defer log.GetLogger().Sync()
+	defer log.GetZapLogger().Sync()
 
 	// config
-	c, err := config.New("bennu")
-	if err != nil {
-		log.Error("config new", "error", err)
-		return
-	}
-	c.SetFile(".", "config", "yaml")
+	c := config.New("bennu")
 	c.SetBindings(app.Bindings)
 	var cfg *app.Config
-	if err := c.Load(&cfg); err != nil {
+	if err := c.Load("config", "yaml", ".", &cfg); err != nil {
 		log.Error("config load", "error", err)
 		return
 	}

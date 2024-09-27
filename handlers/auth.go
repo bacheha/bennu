@@ -24,8 +24,16 @@ type loginRequest struct {
 
 type authHandler struct {
 	cfg        *app.Config
-	logger     *logger.Logger
+	logger     logger.Logger
 	daoFactory dao.Factory
+}
+
+func NewAuthHandler(logger logger.Logger, factory dao.Factory, cfg *app.Config) *authHandler {
+	return &authHandler{
+		logger:     logger,
+		daoFactory: factory,
+		cfg:        cfg,
+	}
 }
 
 func (h *authHandler) Routes() *chi.Mux {
@@ -59,7 +67,7 @@ func (h *authHandler) Login(rw http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	if err != nil {
 		if errors.Is(err, io.EOF) {
-			h.logger.Error("failed to decode empty request body", "error", err)
+			h.logger.Error("empty request body", "error", err)
 			render.Render(rw, r, res.ErrDecode(err))
 			return
 		}
@@ -137,12 +145,4 @@ func (h *authHandler) TokenRefresh(rw http.ResponseWriter, r *http.Request) {
 
 func (h *authHandler) Logout(rw http.ResponseWriter, r *http.Request) {
 	//
-}
-
-func NewAuthHandler(logger *logger.Logger, factory dao.Factory, c *app.Config) *authHandler {
-	return &authHandler{
-		logger:     logger,
-		daoFactory: factory,
-		cfg:        c,
-	}
 }

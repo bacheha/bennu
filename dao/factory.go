@@ -14,28 +14,28 @@ type Factory interface {
 	GetTokenDao() Dao[auth.Token]
 }
 
-type DaoFactory struct {
-	userDao         *UserDao
-	organizationDao *OrganizationDao
-	tokenDao        *TokenDao
+type daoFactory struct {
+	userDao         *userDao
+	organizationDao *organizationDao
+	tokenDao        *tokenDao
 }
 
-func (f *DaoFactory) GetUserDao() Dao[users.User] {
-	return f.userDao
-}
-
-func (f *DaoFactory) GetOrganizationDao() Dao[organizations.Organization] {
-	return f.organizationDao
-}
-
-func (f *DaoFactory) GetTokenDao() Dao[auth.Token] {
-	return f.tokenDao
-}
-
-func NewDaoFactory(db *mongo.Database, validator *validator.Validator) *DaoFactory {
-	return &DaoFactory{
+func NewDaoFactory(db *mongo.Database, validator *validator.Validator) *daoFactory {
+	return &daoFactory{
 		userDao:         NewUserDao(db, validator),
 		organizationDao: NewOrganizationDao(db, validator),
 		tokenDao:        NewTokenDao(db, validator),
 	}
+}
+
+func (f *daoFactory) GetUserDao() Dao[users.User] {
+	return f.userDao
+}
+
+func (f *daoFactory) GetOrganizationDao() Dao[organizations.Organization] {
+	return f.organizationDao
+}
+
+func (f *daoFactory) GetTokenDao() Dao[auth.Token] {
+	return f.tokenDao
 }

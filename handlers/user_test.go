@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/knuls/bennu/dao"
-	"github.com/knuls/bennu/dao/mocks"
+	daoMocks "github.com/knuls/bennu/dao/mocks"
 	"github.com/knuls/bennu/users"
-	"github.com/knuls/horus/logger"
+	logMocks "github.com/knuls/horus/logger/mocks"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -18,13 +18,9 @@ func TestUserHandler(t *testing.T) {
 	t.Parallel()
 
 	// mocks
-	logger, err := logger.New()
-	if err != nil {
-		t.Error(err)
-	}
-	defer logger.GetLogger().Sync()
-	factory := &mocks.Factory{}
-	errFactory := &mocks.ErrFactory{}
+	logger := logMocks.NewLogger()
+	factory := &daoMocks.Factory{}
+	errFactory := &daoMocks.ErrFactory{}
 	id := primitive.NewObjectIDFromTimestamp(time.Now())
 	url := fmt.Sprintf("/%s", id.Hex())
 
@@ -43,7 +39,7 @@ func TestUserHandler(t *testing.T) {
 			method:             http.MethodGet,
 			path:               "/",
 			expectedStatusCode: http.StatusOK,
-			expectedBody:       mocks.MockUsers,
+			expectedBody:       daoMocks.MockUsers,
 		},
 		{
 			name:               "getUserErr",

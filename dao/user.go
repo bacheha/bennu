@@ -11,12 +11,19 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-type UserDao struct {
+type userDao struct {
 	validator *validator.Validator
 	users     *mongo.Collection
 }
 
-func (d *UserDao) Find(ctx context.Context, filter Where) ([]*users.User, error) {
+func NewUserDao(db *mongo.Database, validator *validator.Validator) *userDao {
+	return &userDao{
+		validator: validator,
+		users:     db.Collection(usersCollectionName),
+	}
+}
+
+func (d *userDao) Find(ctx context.Context, filter Where) ([]*users.User, error) {
 	var users []*users.User
 	cursor, err := d.users.Find(ctx, filter)
 	if err != nil {
@@ -31,7 +38,7 @@ func (d *UserDao) Find(ctx context.Context, filter Where) ([]*users.User, error)
 	return users, nil
 }
 
-func (d *UserDao) FindOne(ctx context.Context, filter Where) (*users.User, error) {
+func (d *userDao) FindOne(ctx context.Context, filter Where) (*users.User, error) {
 	result := d.users.FindOne(ctx, filter)
 	err := result.Err()
 	if err != nil {
@@ -47,7 +54,7 @@ func (d *UserDao) FindOne(ctx context.Context, filter Where) (*users.User, error
 	return user, nil
 }
 
-func (d *UserDao) Create(ctx context.Context, user *users.User) (string, error) {
+func (d *userDao) Create(ctx context.Context, user *users.User) (string, error) {
 	exists, err := d.Find(ctx, Where{{Key: "email", Value: user.Email}})
 	if err != nil {
 		return "", err
@@ -72,13 +79,6 @@ func (d *UserDao) Create(ctx context.Context, user *users.User) (string, error) 
 	return result.InsertedID.(primitive.ObjectID).Hex(), nil
 }
 
-func (d *UserDao) Update(ctx context.Context, user *users.User) (*users.User, error) {
+func (d *userDao) Update(ctx context.Context, user *users.User) (*users.User, error) {
 	return nil, errors.New("no impl")
-}
-
-func NewUserDao(db *mongo.Database, validator *validator.Validator) *UserDao {
-	return &UserDao{
-		validator: validator,
-		users:     db.Collection(usersCollectionName),
-	}
 }

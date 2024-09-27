@@ -22,6 +22,10 @@ type User struct {
 	UpdatedAt time.Time          `json:"updatedAt" bson:"updatedAt" validate:"required"`
 }
 
+func NewUser() *User {
+	return &User{}
+}
+
 func (m *User) Render(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
@@ -48,8 +52,4 @@ func (m *User) ComparePassword(p string) error {
 		return err
 	}
 	return nil
-}
-
-func NewUser() *User {
-	return &User{}
 }
