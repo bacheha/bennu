@@ -1,4 +1,4 @@
-package handlers
+package auth
 
 import (
 	"encoding/json"
@@ -8,13 +8,9 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
-	"github.com/knuls/bennu/app"
-	"github.com/knuls/bennu/dao"
 	"github.com/knuls/bennu/users"
 	"github.com/knuls/horus/logger"
 	"github.com/knuls/horus/res"
-	"go.mongodb.org/mongo-driver/bson"
-	"golang.org/x/net/xsrftoken"
 )
 
 type loginRequest struct {
@@ -22,13 +18,19 @@ type loginRequest struct {
 	Password string `json:"password"`
 }
 
-type authHandler struct {
-	cfg        *app.Config
-	logger     *logger.Logger
-	daoFactory dao.Factory
+type handler struct {
+	logger *logger.Logger
+	svc    *service
 }
 
-func (h *authHandler) Routes() *chi.Mux {
+func NewHandler(logger *logger.Logger, svc *service) *handler {
+	return &handler{
+		logger: logger,
+		svc:    svc,
+	}
+}
+
+func (h *handler) Routes() *chi.Mux {
 	mux := chi.NewRouter()
 	mux.Get("/csrf", h.CSRF)                     // GET /auth/csrf
 	mux.Post("/login", h.Login)                  // POST /auth/login
@@ -45,17 +47,17 @@ func (h *authHandler) Routes() *chi.Mux {
 	return mux
 }
 
-func (h *authHandler) CSRF(rw http.ResponseWriter, r *http.Request) {
-	token := xsrftoken.Generate(h.cfg.Auth.Csrf, "", "")
+func (h *handler) CSRF(rw http.ResponseWriter, r *http.Request) {
+	token := h.svc.GetCSRF()
 	render.Status(r, http.StatusOK)
 	if err := render.Render(rw, r, &res.JSON{"token": token}); err != nil {
 		h.logger.Error("failed to render", "error", err)
 	}
 }
 
-func (h *authHandler) Login(rw http.ResponseWriter, r *http.Request) {
+func (h *handler) Login(rw http.ResponseWriter, r *http.Request) {
 	var body *loginRequest
-	err := json.NewDecoder(r.Body).Decode(body)
+	err := json.NewDecoder(r.Body).Decode(&body)
 	defer r.Body.Close()
 	if err != nil {
 		if errors.Is(err, io.EOF) {
@@ -67,36 +69,20 @@ func (h *authHandler) Login(rw http.ResponseWriter, r *http.Request) {
 		render.Render(rw, r, res.ErrDecode(err))
 		return
 	}
-	where := dao.Where{
-		{Key: "$and",
-			Value: bson.A{
-				bson.D{{Key: "email", Value: body.Email}},
-				bson.D{{Key: "verified", Value: true}},
-			},
-		},
-	}
-	user, err := h.daoFactory.GetUserDao().FindOne(r.Context(), where)
+	token, err := h.svc.Login(r.Context(), body.Email, body.Password)
 	if err != nil {
-		h.logger.Error("failed to find user", "error", err)
+		h.logger.Error("failed to login user", "error", err)
 		render.Render(rw, r, res.ErrBadRequest(err))
 		return
 	}
-	if err := user.ComparePassword(body.Password); err != nil {
-		h.logger.Error("failed to compare user password", "error", err)
-		render.Render(rw, r, res.ErrBadRequest(err))
-		return
-	}
-
-	// TODO: create access & refresh tokens
 	// TODO: set access token in resp & refresh token in cookie
-
 	render.Status(r, http.StatusOK)
-	if err = render.Render(rw, r, &res.JSON{"token": "token"}); err != nil {
+	if err = render.Render(rw, r, &res.JSON{"token": token}); err != nil {
 		h.logger.Error("failed to render", "error", err)
 	}
 }
 
-func (h *authHandler) Register(rw http.ResponseWriter, r *http.Request) {
+func (h *handler) Register(rw http.ResponseWriter, r *http.Request) {
 	user := users.NewUser()
 	defer r.Body.Close()
 	if err := user.FromJSON(r.Body); err != nil {
@@ -104,45 +90,34 @@ func (h *authHandler) Register(rw http.ResponseWriter, r *http.Request) {
 		render.Render(rw, r, res.ErrDecode(err))
 		return
 	}
-	id, err := h.daoFactory.GetUserDao().Create(r.Context(), user)
+	id, err := h.svc.Register(r.Context(), user)
 	if err != nil {
-		h.logger.Error("failed to create user", "error", err)
+		h.logger.Error("failed to register user", "error", err)
 		render.Render(rw, r, res.ErrBadRequest(err))
 		return
 	}
-
-	// TODO: create token & send verify email with token
-
 	render.Status(r, http.StatusCreated)
 	if err = render.Render(rw, r, &res.JSON{"id": id}); err != nil {
 		h.logger.Error("failed to render", "error", err)
 	}
 }
 
-func (h *authHandler) ResetPassword(rw http.ResponseWriter, r *http.Request) {
+func (h *handler) ResetPassword(rw http.ResponseWriter, r *http.Request) {
 	//
 }
 
-func (h *authHandler) VerifyEmail(rw http.ResponseWriter, r *http.Request) {
+func (h *handler) VerifyEmail(rw http.ResponseWriter, r *http.Request) {
 	//
 }
 
-func (h *authHandler) VerifyResetPassword(rw http.ResponseWriter, r *http.Request) {
+func (h *handler) VerifyResetPassword(rw http.ResponseWriter, r *http.Request) {
 	//
 }
 
-func (h *authHandler) TokenRefresh(rw http.ResponseWriter, r *http.Request) {
+func (h *handler) TokenRefresh(rw http.ResponseWriter, r *http.Request) {
 	//
 }
 
-func (h *authHandler) Logout(rw http.ResponseWriter, r *http.Request) {
+func (h *handler) Logout(rw http.ResponseWriter, r *http.Request) {
 	//
-}
-
-func NewAuthHandler(logger *logger.Logger, factory dao.Factory, c *app.Config) *authHandler {
-	return &authHandler{
-		logger:     logger,
-		daoFactory: factory,
-		cfg:        c,
-	}
 }

@@ -12,8 +12,9 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
 	"github.com/knuls/bennu/app"
-	"github.com/knuls/bennu/dao"
-	"github.com/knuls/bennu/handlers"
+	"github.com/knuls/bennu/auth"
+	"github.com/knuls/bennu/organizations"
+	"github.com/knuls/bennu/users"
 	"github.com/knuls/horus/config"
 	"github.com/knuls/horus/logger"
 	"github.com/knuls/horus/middlewares"
@@ -75,10 +76,6 @@ func main() {
 		return
 	}
 
-	// dao factory
-	db := client.Database(cfg.Store.Name)
-	factory := dao.NewDaoFactory(db, v)
-
 	// mux
 	mux := chi.NewRouter()
 
@@ -95,10 +92,31 @@ func main() {
 	mux.Use(middlewares.Recoverer)
 	mux.Use(middlewares.Logger(log))
 
+	// collections
+	db := client.Database(cfg.Store.Name)
+	usersCol := db.Collection("users")
+	organizationsCol := db.Collection("organizations")
+	tokensCol := db.Collection("tokens")
+
+	// daos
+	userDao := users.NewDao(v, usersCol)
+	orgDao := organizations.NewDao(v, organizationsCol)
+	tokenDao := auth.NewDao(v, tokensCol)
+
+	// svc
+	userSvc := users.NewService(userDao)
+	orgSvc := organizations.NewService(orgDao)
+	authSvc := auth.NewService(cfg, tokenDao, userDao)
+
 	// handlers
-	mux.Mount("/user", handlers.NewUserHandler(log, factory).Routes())
-	mux.Mount("/organization", handlers.NewOrganizationHandler(log, factory).Routes())
-	mux.Mount("/auth", handlers.NewAuthHandler(log, factory, cfg).Routes())
+	userHandler := users.NewHandler(log, userSvc)
+	orgHandler := organizations.NewHandler(log, orgSvc)
+	authHandler := auth.NewHandler(log, authSvc)
+
+	// routes
+	mux.Mount("/user", userHandler.Routes())
+	mux.Mount("/organization", orgHandler.Routes())
+	mux.Mount("/auth", authHandler.Routes())
 
 	// server
 	srv := &http.Server{
